@@ -1,0 +1,82 @@
+---
+layout: post
+title:  "Rust Wii extension controller driver"
+date:   2022-02-14 23:51:43 +1100
+categories: driver embedded rust
+---
+
+
+---
+### Project links
+
+[wii-ext crate on crates.io](https://crates.io/crates/wii-ext)  
+[wii-ext-rs project repo on github](https://github.com/9names/wii-ext-rs)  
+
+You can find an example project that uses this driver with a Raspberry Pi Pico here:  
+[https://github.com/9names/pico_wii-ext_demo](https://github.com/9names/pico_wii-ext_demo)
+
+---
+
+### Hardware
+The Nintendo Wii shipped with a novel controller that looked a bit like a TV remote, called the Wiimote.  
+This controller did not have any analogue sticks and had very few buttons, which made sense for the intended usage, but would not have worked for the "classic" game control styles.
+The Wiimote controller has a port at the bottom - the extension port - that allowed the user to connect a variety of controllers to it. Some of the controllers augmented the Wiimote: the Nunchuk occupied the other hand and gave you an analogue stick, 2 buttons and a gyro. With these you could play games that required motion with both hands (like boxing), or you could use the analogue stick to steer/move your character in a more traditional manner.
+
+There are several extension controllers other than the Nunchuk: popular ones include the Classic Controller (with 2 analogue sticks and a lot of buttons), the Wii Motion-Plus (which added a better accelerometer+gyro for the Wiimote), Rock Band controllers, fishing controllers, etc.
+
+When the Wii was discontinued most people assumed we'd see no new extension controllers, but they brought back the standard for the SNES classic mini and NES classic mini consoles.
+
+They are still quite cheap, readily available, and since they talk via i2c at 3.3V - very easy to integrate into an embedded project!
+
+---
+
+### Driver notes
+When looking for a way to interface with my controllers, I found this [simple example for talking to the Nunchuk via rust-i2cdev](https://github.com/rust-embedded/rust-i2cdev/blob/master/examples/nunchuck.rs). That was a good starting point, but I really wanted to use it for a microcontroller project so it needed to be ported to use embedded-hal traits.
+
+I also wanted to use classic controllers, and there wasn't an existing driver for those. Classic controllers have a lot of functionality overlap with nunchuk controllers so it made sense to implement them inside the same driver.
+
+The project plan is to eventually support all the devices I own, but any Wii extension device is welcome to be added to this crate - preferably  with test data to verify that it is functional.
+
+There is a [project specifically for capturing data for new controllers](https://github.com/9names/wii-ext-datacapture) if you have a controller that is currently unsupported.
+
+---
+### Usage
+Here's a quick example of how to set up and use the driver: 
+{% highlight rust %}
+use wii_ext::classic::Classic;
+use wii_ext::nunchuk::Nunchuk;
+use ::I2C; /* insert an include for your HAL i2c peripheral name here */
+
+fn main() {
+    let i2c = I2C::new(); /* insert your HAL i2c init here */
+    let mut delay = cortex_m::delay::Delay::new(); /* some delay source as well */
+    
+    /* Create, initialise and calibrate the controller */
+    let mut controller = Classic::new(i2c, &mut delay).unwrap();
+    /* Or you can set up a nunchuk in the same way */
+    /* let mut controller = Nunchuk::new(i2c, &mut delay).unwrap(); */
+
+    /* Enable hi-resolution mode. This also updates calibration */
+    /* Only available on classic controllers */
+    controller.enable_hires(&mut delay).unwrap();
+    loop {
+        let input = controller.read_blocking(&mut delay).unwrap();
+
+        /* You can read individual buttons... */
+        let a = input.button_a;
+        let b = input.button_b;
+        /* nunchuk doesn't have a or b, so use c or z instead */
+        // let c = input.button_c;
+        /* you can also read joystick axes */
+        let x = input.joystick_left_x;
+        let y = input.joystick_left_y;
+        /* nunchuck only has one joystick, so no left/right prefix */
+        // let (x,y) = (input.joystick_x, input.joystick_y);
+        /* the data structs optionally implement defmt::debug */
+        info!("{:?}", input);
+
+        /* Calibration can be manually performed via */
+        controller.update_calibration(&mut delay);
+    }
+}
+{% endhighlight %}
