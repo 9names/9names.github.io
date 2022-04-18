@@ -12,7 +12,6 @@ categories: embedded rust debug
 ```
 ```
 
-
 There are quite a few [CMSIS-DAP](https://os.mbed.com/handbook/CMSIS-DAP) USB debug probes in the wild, and a lot of other devices can be converted into CMSIS-DAP debug probes using various firmware projects.
 
 Most of these derive a lot of the core debugger functionality from [ARM](https://github.com/ARM-software/CMSIS_5) [sources](https://github.com/ARMmbed/DAPLink), though there [are exceptions](https://github.com/probe-rs/hs-probe-firmware).
@@ -20,6 +19,14 @@ Most of these derive a lot of the core debugger functionality from [ARM](https:/
 These probes typically do not make any performance claims as universal tooling support and easy OS compatibility is a higher priority, but that does make choosing or recommending one over the other more difficult than it needs to be.
 
 I could not find any benchmarks of these anywhere, but I do have a small collection of probes and other embedded hardware that can run the open probe firmwares - so I spent a few days running some benchmarks and collecting data!
+
+```
+Note: This post has been edited since original posting
+* 2022-04-18 - rustyprobe was slower than expected because the firmware tested
+was modified to only enumerate as cmsisdap-v1
+* added rust-dap and a non-turbo firmware build of hs-probe to the dataset
+* added a link to the data in CSV form at the bottom of the page
+```
 
 ---
 ### Hardware
@@ -113,6 +120,10 @@ Write performance for USB-C pill and rustyprobe are identical, so they overlap p
 
 dap42 *always* uses the same frequency (internally it's hardcoded to 10Mhz SWD) so performance for that probe is always the same regardless of requested frequency.
 
+rust-dap also runs at a fixed frequency.
+
+CMSIS-DAP V2 firmware is roughtly twice as fast as CMSIS-DAP V1 firmware on USB Full Speed
+
 ![stm32_write_perf_fullspeed.svg](/assets/2022-04-04/stm32_write_perf_fullspeed.svg)
 ![stm32_read_perf_fullspeed.svg](/assets/2022-04-04/stm32_read_perf_fullspeed.svg)
 
@@ -146,13 +157,17 @@ One outlier here is MCU-Link running DAPLink firmware, which manages to acheive 
 My main takeaways from this testing:
 - CMSIS-DAP is not a very efficient protocol. The data rates achieved by the high-speed probes are below what could be achieved over USB Full Speed, and the Full Speed ones are even slower.  
   There are plenty of gains to be had by adding extensions like the hardware vendors do, while still preserving the universal compatibility of the standard.
-- All USB Full Speed probes are basically equivalent, but I would not recommend DAP42 any time you care about low-speed connections (long wires, etc).
+- The performance of all USB Full Speed CMSIS-DAP V1 probes are basically equivalent, and the same seems to be true for V2 though my sample size is small here.
+I would not recommend DAP42 or rust-dap if care about low-speed connections (long wires, etc) since it won't honour the requested speeds.
 - HSProbe is the fastest CMSIS-DAP probe that I own
 - STLink performance is better than expected.  
   The USB Full Speed STLink V2 being almost the same performance class as the cheaper USB High Speed probes was quite surprising.  
   The V3 being twice as fast as HSProbe is also not what I expected, but obviously the limitation is that you can only debug STM processors with this probe.
 - JLink performance, even without using their DLL or proprietary protocol, is better than I expected. I was anticipating it being beaten by the Full Speed probes, and this is not the case.  
   It's still not good though. And if you want RTT, there are better CMSIS-DAP options.
+
+#### Data
+If you'd prefer to see the raw data or make your own graphs, [download the data in CSV from here](/assets/2022-04-04/data.csv)
 
 ---
 ```
