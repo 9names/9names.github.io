@@ -48,7 +48,7 @@ The commercial probes I used for testing were:
 
 Dev boards I also tested for performance:
 - [stm32f411 USB-C pill](https://therealprof.github.io/blog/usb-c-pill-part1/) (ARM WeAct CMSIS-DAP firmware)
-- Raspberry Pi Pico ([DapperMime](https://github.com/majbthrd/DapperMime) and [RustyProbe](https://github.com/probe-rs/rusty-probe) firmware)
+- Raspberry Pi Pico ([DapperMime](https://github.com/majbthrd/DapperMime), [RustyProbe](https://github.com/probe-rs/rusty-probe) and [rust-dap](https://github.com/ciniml/rust-dap) firmware)
 - STLink V2 clone (STLink mode, latest firmware, for comparison to CMSIS-DAP)
 - stm32f103 blue pill [DAP42](https://github.com/devanlai/dap42)
 
